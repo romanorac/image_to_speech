@@ -1,3 +1,6 @@
+# Install the packages by running this in terminal
+# pip install -U streamlit==1.28.2 pyobjc==9.0.1 pyttsx3==2.90
+
 import pathlib
 import subprocess
 import streamlit as st
@@ -21,13 +24,15 @@ class AgentEnum(Enum):
     SOCCER_COMMENTARY = "Soccer Commentary"
 
 
+# python class that stores information about the agent
 @dataclass
 class Agent:
-    name: str
-    prompt: str
-    voice_id: int
+    name: str # name is shown in the web app ratio button
+    prompt: str # prompt that is sent to the model
+    voice_id: int # you can play with different voices
 
 
+# Define 3 agents
 AGENT_DICT = {
     AgentEnum.PARIS_TOURIST_GUIDE.value: Agent(
         name=AgentEnum.PARIS_TOURIST_GUIDE.value,
@@ -73,7 +78,7 @@ def image_to_text(image_path, text_path, agent):
     return_code = process.returncode
     return return_code == 0
 
-# extract only the the model response
+# extract only the the model response and skip the model logs
 def clean_text(image_text):
     image_text_split = image_text.split("\n")
 
@@ -87,6 +92,8 @@ def clean_text(image_text):
     return "Text could not be cleaned"
 
 
+# this function is used to beautify the generated text on the web page
+# by showing each statement in a new line
 def split_text_by_dot(image_text):
     return ".\n".join(t.strip() for t in image_text.split("."))
 
@@ -108,38 +115,45 @@ def text_to_speech(text, agent):
 def main():
     st.title("📸 Image to Speech🎶")
 
-    # Using object notation
+    # show all agents in the ratio button
     agent_radio = st.sidebar.radio(
-        "Agent", (agent_enum.value for agent_enum in AgentEnum)
+        "Prompt", (agent_enum.value for agent_enum in AgentEnum)
     )
     print(agent_radio)
 
+    # extract an agent
     agent = AGENT_DICT[agent_radio]
 
+    # upload image placeholder
     uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png"])
 
     if uploaded_file is None:
         return
 
+    # # show image on the web page
     # To read file as bytes:
     bytes_data = uploaded_file.getvalue()
 
     st.subheader("Image")
     st.image(bytes_data, width=500)
 
+    # prepare paths for text and image in the temp folder
     image_path = pathlib.Path(tempfile.gettempdir(), uploaded_file.name)
     text_path = image_path.with_suffix(".txt")
-
     print("image_path", image_path)
     print("text path", text_path)
+
+    # save the image into temp folder
     with open(str(image_path), "wb") as f:
         f.write(uploaded_file.getbuffer())
 
+    # generate the text from an image
     success = image_to_text(image_path, text_path, agent)
     if not success:
         st.text("There was a problem with text extraction from an image. Check logs")
         return
 
+    # read the generated text
     text = text_path.read_text()
     if not text or len(text) == 0:
         st.text("No text was read")
